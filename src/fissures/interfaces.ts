@@ -1,19 +1,23 @@
 interface FissureNotFoundResponse {
-    foundAnyFissures: false;
-    fieldOneName: string;
-    fieldOneValue: string;
-  }
-  
- interface FissureFoundResponse {
-    foundAnyFissures: true;
-    fieldNameOne: string;
-    fieldOneValue: string;
-    fieldNameTwo: string;
-    fieldTwoValue: string;
-    fieldThreeName: string;
-    fieldThreeValue: string;
-    fieldFourName: string;
-    fieldFourValue: string;
-  }
+  foundAnyFissures: false;
+  noActiveEndlessFissure: string;
+  noActiveEndlessFissureMessage: string;
+}
+
+interface FissureFoundResponse {
+  foundAnyFissures: true;
+  missionType: string;
+  currentMissionTypes: string;
+  planet: string;
+  currentPlanetResources: string;
+  timeLeft: string;
+  currentTimesLeft: string;
+  missionNode: string;
+  nodeName: string;
+  upComingFissures: string;
+  nextFissureMessage: string;
+  noActiveEndlessFissureMessage?: never; // Make the property optional or remove it
+  noActiveEndlessFissure?: never; // Make the property optional or remove it
+}
 
 export type FissureResponse = FissureNotFoundResponse | FissureFoundResponse;

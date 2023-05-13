@@ -1,11 +1,12 @@
 import fetch from 'node-fetch';
 import {client} from '../index';
-import { Channel, EmbedBuilder, TextChannel } from 'discord.js';
+import { Channel, EmbedBuilder, Message, TextChannel } from 'discord.js';
 import { Planets } from '../planets/Planets';
-import { FissureResponse } from './interfaces';
 import { roles } from '../roles/Roles';
+import { channel } from '../events/ready';
+import { FissureResponse } from './interfaces';
 export default class FissureService {
-    private readonly _fissureUrl = "https://api.warframestat.us/pc/fissures";
+    private readonly _fissureUrl = "https://api.warframestat.us/pc/fissures/?language=en";
 
     private allAxiFissuresEtas: number[] = [];
     private allNeoFissuresEtas: number[] = [];
@@ -15,108 +16,149 @@ export default class FissureService {
     private allLowestFissureTimes: number[] = [];
 
     private relicTypes: string[] = ['Axi','Neo', 'Meso', 'Lith', 'axi','neo','meso', 'lith', 'Requiem', 'requiem'];
-    private missionTypoes: string[] = ['Survival', 'Interception', 'Disruption', 'Excavation', 'survival', 'interception', 'disruption', 'excavation'];
-    public async getFissures() {
-        
-        const response = await fetch(this._fissureUrl);
-        const responseData = await response.json();
-
-        if(Array.isArray(responseData)) {
-            const fissures: any[] = responseData;
-            console.log(process.env.hostingChannel)
-            const channel = await client.channels.fetch(process.env.hostingChannel) as TextChannel | undefined;
+    private missionTypes: string[] = ['Survival', 'Interception', 'Disruption', 'Excavation', 'survival', 'interception', 'disruption', 'excavation'];
+    public async getFissures(discordChannel: TextChannel) {
+        try {
+          const response = await fetch(this._fissureUrl);
+          const responseData = await response.json();
+  
+          if(Array.isArray(responseData) && response.status === 200) {
+              const fissures: any[] = responseData;
+              // const channel = client.channels.cache.get('1013907131902210133');
+              // await channel.delete("1106676523899027546")  
             //get a list of all the channels in the server
-            console.log(channel)
-            let currentTimeRemaining: string = "";
-            let currentMissionTypes: string = "";
-            let currentResources: string = "";
-    
-    
-            //creating embed to send to channel
-            const embed = new EmbedBuilder();
-    
-            //setting embed title
-            embed.setTitle("Current Fissures");
-    
-            //looping through reponses to see which are steel path mission
-            for (const fissure of fissures){
-                if(!fissure['isStorm'] && fissure['isHard']) {
-
-                    if(fissure['tier'] === 'Axi') {
-                        this.allAxiFissuresEtas.push(this.getTimeFromFissure(fissure));
-                    }
-               
-                    if(fissure['tier'] === 'Meso') {
-                        this.allMesoFissuresEtas.push(this.getTimeFromFissure(fissure));
-                    }
-               
-                    if(fissure['tier'] === 'Neo') {
-                        this.allNeoFissuresEtas.push(this.getTimeFromFissure(fissure));
-                    }
-               
-                    if(fissure['tier'] === 'Lith') {
-                        this.allLithFissuresEtas.push(this.getTimeFromFissure(fissure));
-                    }
-                      
-                    if(fissure['tier'] === 'Requiem') {
-                        this.allRequiemFissuresEtas.push(this.getTimeFromFissure(fissure));
-                    }
-
-                    if(fissure['missionKey'] === 'Survival' || fissure['missionKey'] ===  'Excavation' || fissure['missionKey'] ===  'Disruption' ||  fissure['missionKey'] ===  'Interception' ) 
-                    {
-                      let currentPlanet = Planets.find(planets => fissure['nodeKey'].includes(planets.getPlanetName()));
-                      currentMissionTypes += '' + fissure['tier'] + ' ' + fissure['missionKey'] + '\n';
-                      currentResources += "[" + currentPlanet.getPlanetName() +"]("+currentPlanet.getPlanetWikiLink()+" '" + currentPlanet.getResources() + "')\n";
-                      currentTimeRemaining += this.getTimeFromFissure(fissure);
-                     }
-                }
-            }
-
-            const nextFissureMessage = 
-            '\n\nNext Axi fissure ' + this.convertSecsToTimestamp(Math.min(...this.allAxiFissuresEtas)) + 
-            'Next Neo fissure ' + this.convertSecsToTimestamp(Math.min(...this.allNeoFissuresEtas)) +
-            'Next Meso fissure ' + this.convertSecsToTimestamp(Math.min(...this.allMesoFissuresEtas)) +
-            'Next Lith fissure ' + this.convertSecsToTimestamp(Math.min(...this.allLithFissuresEtas)) +
-            'Next Requim fissure ' + this.convertSecsToTimestamp(Math.min(...this.allRequiemFissuresEtas));
-
-            const embedMessage: FissureResponse = this.checkIfFoundAnyFissures(currentMissionTypes, currentResources, currentTimeRemaining, nextFissureMessage);
-
-            if(embedMessage.foundAnyFissures) {
-                embed.addFields( 
-                    {name: embedMessage.fieldNameOne, value: embedMessage.fieldOneValue, inline: true}, 
-                    {name: embedMessage.fieldNameTwo, value: embedMessage.fieldTwoValue, inline: true}, 
-                    {name: embedMessage.fieldThreeName, value: embedMessage.fieldThreeValue , inline: true} , 
-                    {name: embedMessage.fieldFourName, value: embedMessage.fieldFourValue});
+              let currentTimeRemaining: string = "";
+              let currentMissionTypes: string = "";
+              let currentResources: string = "";
+              let currentMissionNodes: string = "";
+      
+      
+              //creating embed to send to channel
+              const embed = new EmbedBuilder();
+      
+              //setting embed title
+              embed.setTitle("Current Fissures");
+      
+              //looping through reponses to see which are steel path mission
+              for (const fissure of fissures){
+                  if(!fissure['isStorm'] && fissure['isHard']) {
+  
+                      if(fissure['tier'] === 'Axi') {
+                          this.allAxiFissuresEtas.push(this.getTimeFromFissure(fissure));
+                      }
                  
-            } else {
-                //if no fissures were found
-                embed.addFields(
-                    {name: embedMessage.fieldOneValue, value: embedMessage.fieldOneValue, inline: true})
-            }
-
-            //get roles to ping
-            const rolesToPing = this.getRolesToPing(currentMissionTypes);
-
-
-            //get messages from channel
-            //const messages = await channel.messages.fetch()
-
-        
-            // await channel.messages.fetch(process.env.fissureMessageId)
-            // .then(currentMsg => {
-            //     console.log(currentMsg)
-            // //  currentMsg.forEach(msg => {
-            // //   if(msg.author.bot && msg.embeds.length > 0) {
-            // //     msg.edit({ embeds: [embed]});
-            // //    }
-            // //  })
-            // })
-            // .catch(console.error);
+                      if(fissure['tier'] === 'Meso') {
+                          this.allMesoFissuresEtas.push(this.getTimeFromFissure(fissure));
+                      }
+                 
+                      if(fissure['tier'] === 'Neo') {
+                          this.allNeoFissuresEtas.push(this.getTimeFromFissure(fissure));
+                      }
+                 
+                      if(fissure['tier'] === 'Lith') {
+                          this.allLithFissuresEtas.push(this.getTimeFromFissure(fissure));
+                      }
+                        
+                      if(fissure['tier'] === 'Requiem') {
+                          this.allRequiemFissuresEtas.push(this.getTimeFromFissure(fissure));
+                      }
+  
+                      if(fissure['missionKey'] === 'Survival' || fissure['missionKey'] ===  'Excavation' || fissure['missionKey'] ===  'Disruption' ||  fissure['missionKey'] ===  'Interception' ) 
+                      {
+                        let currentPlanet = Planets.find(planets => fissure['nodeKey'].includes(planets.getPlanetName()));
+                        currentMissionTypes += '' + fissure['tier'] + ' ' + fissure['missionKey'] + " - "+ fissure['node'] + '\n';
+                        currentResources += "[" + currentPlanet.getPlanetName() +"]("+currentPlanet.getPlanetWikiLink()+" '" + currentPlanet.getResources() + "')\n";
+                        currentMissionNodes += "" + fissure['node'] + "\n";
+                        currentTimeRemaining += this.convertSecondsToTimeStamp(this.getTimeFromFissure(fissure));
+                       }
+                  }
+              }
+  
+              const nextFissureMessage = 
+              '\n\nNext Axi fissure ' + this.convertSecsToTimestamp(Math.min(...this.allAxiFissuresEtas)) + 
+              'Next Neo fissure ' + this.convertSecsToTimestamp(Math.min(...this.allNeoFissuresEtas)) +
+              'Next Meso fissure ' + this.convertSecsToTimestamp(Math.min(...this.allMesoFissuresEtas)) +
+              'Next Lith fissure ' + this.convertSecsToTimestamp(Math.min(...this.allLithFissuresEtas)) +
+              'Next Requim fissure ' + this.convertSecsToTimestamp(Math.min(...this.allRequiemFissuresEtas));
+  
+              const embedMessage: FissureResponse = this.checkIfFoundAnyFissures(currentMissionTypes, currentResources, currentTimeRemaining, currentMissionNodes, nextFissureMessage);
+  
+              if(embedMessage.foundAnyFissures) {
+                embed.addFields( 
+                  { name: embedMessage.missionType, value: embedMessage.currentMissionTypes, inline: true }, 
+                  { name: embedMessage.planet, value: embedMessage.currentPlanetResources, inline: true }, 
+                  { name: embedMessage.timeLeft, value: embedMessage.currentTimesLeft, inline: true },
+                  { name: embedMessage.upComingFissures, value: embedMessage.nextFissureMessage, inline: false }
+                );
+                
+                
+                   
+              } else {
+                  //if no fissures were found
+                  embed.addFields(
+                      {name: embedMessage.noActiveEndlessFissure, value: embedMessage.noActiveEndlessFissureMessage, inline: true})
+              }
+  
+              //get roles to ping
+              const rolesToPing = this.getRolesToPing(currentMissionTypes);
+              
+              const rolePingMessage = await channel.send(rolesToPing);
+              
+              rolePingMessage.delete();
+              
+              //send message to channel
+              await channel.messages.fetch(process.env.embedId)
+              .then(currentMsg => {
+                if(currentMsg.author.id === client.user.id){
+                  currentMsg.edit({embeds: [embed]});
+                } else {
+                  channel.send({embeds: [embed]});
+                }
+              })
+              .catch((error) => {
+                console.log(error)
+                channel.send({embeds: [embed]});
+              }
+          );
+  
+  
+  
+              //store the smallest value in each relic tier into array
+              this.allLowestFissureTimes.push(Math.min(...this.allAxiFissuresEtas));
+              this.allLowestFissureTimes.push(Math.min(...this.allNeoFissuresEtas));
+              this.allLowestFissureTimes.push(Math.min(...this.allMesoFissuresEtas));
+              this.allLowestFissureTimes.push(Math.min(...this.allLithFissuresEtas));
+              this.allLowestFissureTimes.push(Math.min(...this.allRequiemFissuresEtas));
+  
+              const dealyedTimeBeforeStartingLoopAgain = this.getDelayTimeBeforeStartingLoopAgain(this.allLowestFissureTimes);
+              
+  
+              //clear all arrays
+              this.allAxiFissuresEtas = [];
+              this.allNeoFissuresEtas = [];
+              this.allMesoFissuresEtas = [];
+              this.allLithFissuresEtas = [];
+              this.allRequiemFissuresEtas = [];
+              this.allLowestFissureTimes = [];
+  
+              setTimeout(() => {
+              this.getFissures(channel);
+              }, dealyedTimeBeforeStartingLoopAgain);
+          } 
+        } catch (error) {
+          console.log(error)
+          setTimeout(() => {
+            this.getFissures(channel);
+            }, 30000);
         }
-
-
+       
         //return fissures;
     }
+  getDelayTimeBeforeStartingLoopAgain(allLowestFissureTimes: number[]) {
+    const lowestTimeInSeconds = Math.min(...allLowestFissureTimes);
+    const delayTimeInMilliseconds = (lowestTimeInSeconds * 1000) + 10000;
+    return delayTimeInMilliseconds;
+  }
 
     public getTimeFromFissure(fissure: any): number {
         let hour: number = fissure['eta'].indexOf('h');
@@ -160,8 +202,13 @@ export default class FissureService {
           }
           ttlSecs += parseFloat(secsReversed);
         }
-      
         return ttlSecs;
+      }
+
+      private convertSecondsToTimeStamp(timeInSecs: number): string { 
+        const newDate = new Date();
+        newDate.setSeconds(newDate.getSeconds() + timeInSecs);
+        return 'Ends <t:' + Math.floor(newDate.getTime() / 1000) + ':R>\n';
       }
 
       private getRolesToPing(currentMissionTypes: string): string {
@@ -181,31 +228,35 @@ export default class FissureService {
         return 'is <t:' + Math.floor(newDate.getTime() / 1000) + ':R>\n';
       }
 
-      private checkIfFoundAnyFissures(currentMissionTypes: string, currentResources: string,
-         currentTimeRemaining: string, nextFissureMessage: string): FissureResponse {
-            {
-                if (currentMissionTypes === "" || currentResources === "" || currentTimeRemaining === "") {
-                  return {
-                    foundAnyFissures: false,
-                    fieldOneName: 'No Endless Fissures Found',
-                    fieldOneValue: nextFissureMessage
-                  };
-                } else {
-                  return {
-                    foundAnyFissures: true,
-                    fieldNameOne: "Mission Type",
-                    fieldOneValue: currentMissionTypes,
-                    fieldNameTwo: "Planet",
-                    fieldTwoValue: currentResources,
-                    fieldThreeName: "Time Left",
-                    fieldThreeValue: currentTimeRemaining,
-                    fieldFourName: 'Times are below of next fissures that should pop',
-                    fieldFourValue: nextFissureMessage
-                  };
-                }
-            }
-    }
+
+      private checkIfFoundAnyFissures(
+        currentMissionTypes: string,
+        currentResources: string,
+        currentTimeRemaining: string,
+        currentMissionNodes: string,
+        nextFissureMessage: string
+      ): FissureResponse {
+        if (currentMissionTypes === "" || currentResources === "" || currentTimeRemaining === "") {
+          return {
+            foundAnyFissures: false,
+            noActiveEndlessFissure: 'No Endless Fissures Found',
+            noActiveEndlessFissureMessage: nextFissureMessage
+          };
+        } else {
+          return {
+            foundAnyFissures: true,
+            missionType: "Mission Type",
+            currentMissionTypes: currentMissionTypes,
+            planet: "Planet",
+            currentPlanetResources: currentResources,
+            timeLeft: "Time Left",
+            currentTimesLeft: currentTimeRemaining,
+            missionNode: "Mission Node",
+            nodeName: currentMissionNodes,
+            upComingFissures: "Times are below of next fissures that should pop up",
+            nextFissureMessage: nextFissureMessage
+          };
+        }
+      }
 
 }
-
-

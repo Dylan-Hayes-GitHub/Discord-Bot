@@ -5,6 +5,7 @@ declare global {
             guildId: string;
             embedId: string;
             hostingChannel: string;
+            botId: string;
             environment: "dev" | "prod" | "debug";
         }
     }

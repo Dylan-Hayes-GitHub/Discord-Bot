@@ -1,16 +1,14 @@
 import { ApplicationCommandDataResolvable, Client, ClientEvents, Collection, GatewayIntentBits } from "discord.js";
 import { CommandType } from "../typings/Command";
-import { GlobOptions, glob } from 'glob';
-import { promisify } from "util";
 import { RegisterCommandsOptions } from "../typings/client";
 import { Event } from "./Events";
 import FissureService from "../fissures/fissureService";
 
 
-const globPromise = promisify(glob);
+
 import fs from 'node:fs';
 import path from 'node:path';
-import { client } from "..";
+import { client, rest } from "..";
 export class DiscordClient extends Client {
     commands: Collection<string, CommandType> = new Collection();
 
@@ -21,16 +19,8 @@ export class DiscordClient extends Client {
 
 
     start() {
-        //this.getChannel();
         this.registerModules();
-        const fissureService = new FissureService();
-        fissureService.getFissures();
         this.login(process.env.botToken);
-    }
-    async getChannel() {
-        const channel = await client.channels.fetch("1013907131902210133");
-        const messages = await channel.fetch();
-        console.log(messages);
     }
 
     async importFile(filePath: string){
@@ -53,8 +43,6 @@ export class DiscordClient extends Client {
 
     async registerModules(){
         this.application?.commands.set([]);
-        const channel = client.channels.cache.get(process.env.channelId);
-        console.log(channel);
         this.guilds.cache.get(process.env.guildId)?.commands.set([]);
         const foldersPath = path.join(__dirname, "..",'commands');
         const commandFolders = fs.readdirSync(foldersPath);
@@ -62,15 +50,12 @@ export class DiscordClient extends Client {
         
         // Loop through all command folders
         for (const folder of commandFolders) {
-            console.log("called outter loop")
           const commandsPath = path.join(foldersPath, folder);
           const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.ts'));
           // Loop through all command files
           for (const file of commandFiles) {
-            console.log("called inner loop")
 
             const filePath = path.join(commandsPath, file);
-            console.log(filePath)
             const command: CommandType = await this.importFile(filePath);
 
             if (!command.name) return;
@@ -79,7 +64,6 @@ export class DiscordClient extends Client {
         
           }
         }
-        console.log(slashCommands)
         this.on("ready", () => {
             this.registerCommands({
                 commands: slashCommands,
@@ -90,10 +74,8 @@ export class DiscordClient extends Client {
         const eventsPath = path.join(__dirname, "..",'events');
         const eventFolder = fs.readdirSync(eventsPath);
 
-        console.log(process.env.botToken);
 
         for (const event of eventFolder) {
-            console.log(event);
             const eventPath = path.join(eventsPath, event);
             const commandEvent: Event<keyof ClientEvents> = await this.importFile(eventPath);
             this.on(commandEvent.name, commandEvent.run);
