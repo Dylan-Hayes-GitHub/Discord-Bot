@@ -1,4 +1,4 @@
-import { ApplicationCommandDataResolvable, Client, ClientEvents, Collection, GatewayIntentBits } from "discord.js";
+import { ApplicationCommandDataResolvable, Client, ClientEvents, Collection, CommandInteraction, GatewayIntentBits, REST, Routes, SlashCommandBuilder } from "discord.js";
 import { CommandType } from "../typings/Command";
 import { RegisterCommandsOptions } from "../typings/client";
 import { Event } from "./Events";
@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { client, rest } from "..";
 export class DiscordClient extends Client {
-    commands: Collection<string, CommandType> = new Collection();
+    commands: Collection<string, any> = new Collection();
 
     constructor() {
         super({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
@@ -42,6 +42,8 @@ export class DiscordClient extends Client {
       
 
     async registerModules(){
+
+
         this.application?.commands.set([]);
         this.guilds.cache.get(process.env.guildId)?.commands.set([]);
         const foldersPath = path.join(__dirname, "..",'commands');
@@ -56,20 +58,54 @@ export class DiscordClient extends Client {
           for (const file of commandFiles) {
 
             const filePath = path.join(commandsPath, file);
-            const command: CommandType = await this.importFile(filePath);
-
-            if (!command.name) return;
-            this.commands.set(command.name, command);
-            slashCommands.push(command);
-        
+            const command: any = await this.importFile(filePath);
+            console.log(command.data.toJSON()   );
+           
+           this.commands.set(command.data.name ,command);
+           slashCommands.push(command.data);
           }
         }
-        this.on("ready", () => {
-            this.registerCommands({
-                commands: slashCommands,
-                guildId: process.env.guildId
-            });
-        });
+
+        // const hostCommand = {
+        //     data: new SlashCommandBuilder()
+        //     .setName('echo')
+        //     .setDescription('Replies with your input!')
+        //     .addStringOption(option =>
+        //         option.setName('input')
+        //             .setDescription('The input to echo back'))
+        //     .addBooleanOption(option =>
+        //         option.setName('ephemeral')
+        //             .setDescription('Whether or not the echo should be ephemeral')),
+        //     async execute(interaction: CommandInteraction) {
+        //         const tier = interaction.options.get("Relic Tier")!.value as string;
+        //       interaction.reply(`You have selected ${tier} tier`);
+        //     },
+        //   };
+
+        
+        // this.application?.commands.set([]);
+        this.guilds.cache.get(process.env.guildId)?.commands.set([]);
+
+        this.application?.commands.set(slashCommands);
+        console.log(this.commands);
+
+
+        (async () => {
+            try {
+                console.log(`Started refreshing ${slashCommands.length} application (/) commands.`);
+        
+                // The put method is used to fully refresh all commands in the guild with the current set
+                const data: any = await rest.put(
+                    Routes.applicationGuildCommands("1015997195541037147", "1013907131415674940"),
+                    { body: slashCommands },
+                );
+        
+                console.log(`Successfully reloaded ${data.length} application (/) commands.`);
+            } catch (error) {
+                // And of course, make sure you catch and log any errors!
+                console.error(error);
+            }
+        })();
 
         const eventsPath = path.join(__dirname, "..",'events');
         const eventFolder = fs.readdirSync(eventsPath);

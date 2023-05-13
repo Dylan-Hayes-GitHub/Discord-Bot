@@ -5,5 +5,5 @@ import { REST } from "discord.js";
 dotenv.config();
 
 export const client = new DiscordClient();
-export const rest = new REST({ version: "10" }).setToken(process.env.botId);
+export const rest = new REST().setToken(process.env.botToken);
 client.start();
