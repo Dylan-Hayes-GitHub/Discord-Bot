@@ -4,12 +4,13 @@ import { GlobOptions, glob } from 'glob';
 import { promisify } from "util";
 import { RegisterCommandsOptions } from "../typings/client";
 import { Event } from "./Events";
-
+import FissureService from "../fissures/fissureService";
 
 
 const globPromise = promisify(glob);
 import fs from 'node:fs';
 import path from 'node:path';
+import { client } from "..";
 export class DiscordClient extends Client {
     commands: Collection<string, CommandType> = new Collection();
 
@@ -17,9 +18,19 @@ export class DiscordClient extends Client {
         super({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
     }
 
+
+
     start() {
+        //this.getChannel();
         this.registerModules();
-        this.login("MTAxNTk5NzE5NTU0MTAzNzE0Nw.G0Cfgn.5dRJsieDkFLESjGN0M8xTUsX_OXVRfmaEu6Skk");
+        const fissureService = new FissureService();
+        fissureService.getFissures();
+        this.login(process.env.botToken);
+    }
+    async getChannel() {
+        const channel = await client.channels.fetch("1013907131902210133");
+        const messages = await channel.fetch();
+        console.log(messages);
     }
 
     async importFile(filePath: string){
@@ -42,6 +53,8 @@ export class DiscordClient extends Client {
 
     async registerModules(){
         this.application?.commands.set([]);
+        const channel = client.channels.cache.get(process.env.channelId);
+        console.log(channel);
         this.guilds.cache.get(process.env.guildId)?.commands.set([]);
         const foldersPath = path.join(__dirname, "..",'commands');
         const commandFolders = fs.readdirSync(foldersPath);
