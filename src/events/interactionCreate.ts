@@ -5,9 +5,7 @@ import { ExtendedInteraction } from "../typings/Command";
 export default new Event("interactionCreate", async (interaction) => {
     // Chat Input Commands
     if (interaction.isCommand()) {
-        await interaction.deferReply();
         // Get the command from the client
-        // @ts-ignore
         const command = client.commands.get(interaction.commandName);
         console.log(command)
         //const command = interaction.client.application.commands.fetch(interaction.commandName);
