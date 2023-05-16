@@ -1,6 +1,7 @@
 import { Command } from "../../structures/Command";
-import { CommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, CommandInteraction, SlashCommandBuilder } from "discord.js";
 import { CommandType } from "../../typings/Command";
+import hostingMessageOptions from "../../fissureMessage/fissureHostingMessage";
 
 
 const hostSquadCommand = {
@@ -53,18 +54,22 @@ const hostSquadCommand = {
 		const members = interaction.options.get('members').value;
 		const duration = interaction.options.get('duration').value;
 		const frames = interaction.options.get('frames')?.value;
-		
-		console.log(relic, members, duration, frames);
-		if(frames === undefined){
+
+		  if(frames === undefined){
 			return interaction.reply(`Processing Host Request of ${relic} ${mission}, ${members}, ${duration}`).then(() => {
-				setTimeout(() => {
-				  interaction.deleteReply();
+				setTimeout(async () => {
+				  await interaction.deleteReply();
 				}, 3000);
 			  });
 			}else if(frames !== undefined){
-				return interaction.reply(`Processing Host Request of ${relic} ${mission}, ${members}, ${duration}, ${frames}`).then(() => {
-				setTimeout(() => {
-					interaction.deleteReply();
+				console.log("interaction before ruturn ", interaction.id)
+				return await interaction.reply(`Processing Host Request of ${relic} ${mission}, ${members}, ${duration}, ${frames}`).then((q) => {
+					console.log("outer message id ", q.id)
+				setTimeout(async () => {
+					const message = await interaction.editReply({content: `Host Request of ${relic} ${mission}, ${members}, ${duration} | LF ${frames} `, components: [hostingMessageOptions]})
+					
+					console.log("inner message id ", message.id)
+					
 				}, 3000);
 				});
 			}

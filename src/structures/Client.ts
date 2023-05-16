@@ -87,7 +87,6 @@ export class DiscordClient extends Client {
         this.guilds.cache.get(process.env.guildId)?.commands.set([]);
 
         this.application?.commands.set(slashCommands);
-        console.log(this.commands);
 
 
         (async () => {
