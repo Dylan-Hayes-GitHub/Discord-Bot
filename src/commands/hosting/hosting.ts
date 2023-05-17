@@ -1,7 +1,11 @@
 import { CommandInteraction, SlashCommandBuilder } from "discord.js";
 import hostingMessageOptions from "../../fissureMessage/fissureHostingMessage";
+import { Squad, UserInSquad } from "../../fissures/interfaces";
+import { getDatabase, ref, set } from "firebase/database";
+import FissureService from "../../fissures/fissureService";
+import { channel } from "diagnostics_channel";
 
-
+const fissureService = new FissureService();
 const hostSquadCommand = {
 	data: new SlashCommandBuilder()
 	.setName('host')
@@ -47,33 +51,96 @@ const hostSquadCommand = {
 			.setRequired(false)
 		),
 	async execute(interaction: CommandInteraction) {
-		const relic = interaction.options.get('relic').value;
-		const mission = interaction.options.get('mission').value;
-		const members = interaction.options.get('members').value;
-		const duration = interaction.options.get('duration').value;
-		const frames = interaction.options.get('frames')?.value;
+		const relic: string = interaction.options.get('relic')?.value as string;
+		const mission: string = interaction.options.get('mission')?.value as string;
+		const members: string = interaction.options.get('members')?.value as string;
+		const duration: string = interaction.options.get('duration')?.value as string;
+		const frames: string = interaction.options.get('frames')?.value as string;
 
-		  if(frames === undefined){
-			return interaction.reply(`Processing Host Request of ${relic} ${mission}, ${members}, ${duration}`).then(() => {
+		const hostInSquad: UserInSquad = {
+			userId: interaction.user.id,
+			userName: interaction.user.username
+		}
+
+		let hostingMessageId: string = "";
+			if (frames === undefined) {
+				return await interaction.reply(`Processing Host Request of ${relic} ${mission}, ${members}, ${duration}`).then((q) => {
+					console.log("outer message id ", q.id)
 				setTimeout(async () => {
-				  await interaction.deleteReply();
+					const message = await interaction.editReply({content: `${interaction.user.username} hosts ${relic} ${mission}, ${members}, ${duration}`, components: [hostingMessageOptions]})
+					hostingMessageId = message.id
+					const guestMembers: boolean = +members.charAt(0) > 1 ? true : false;
+
+					const squad: Squad = {
+						relic: relic,
+						mission: mission,
+						currentSquad: [hostInSquad],
+						messageId: hostingMessageId,
+						guestMembers: guestMembers,
+						duration: duration,
+						hostId: interaction.user.id,
+						totalSquadMembers: +members.charAt(0),
+						totalGuestMembers: +members.charAt(0) - 1
+						}
+					
+					//add values to firebase
+					const db = getDatabase();
+					
+					//add values to firebase
+					await set(ref(db, 'squad/' + hostingMessageId), squad);
+
+					const subscriptionsToPing = await fissureService.getUsersToPingFromFirebase([relic+mission]);
+
+					interaction.channel.send(subscriptionsToPing[0]).then((message) => {
+						setTimeout(() => {
+							message.delete();
+						}, 3000);
+					});
 				}, 3000);
-			  });
-			}else if(frames !== undefined){
-				console.log("interaction before ruturn ", interaction.id)
+				});			  
+			} else if (frames !== undefined) {
 				return await interaction.reply(`Processing Host Request of ${relic} ${mission}, ${members}, ${duration}, ${frames}`).then((q) => {
 					console.log("outer message id ", q.id)
 				setTimeout(async () => {
-					const message = await interaction.editReply({content: `Host Request of ${relic} ${mission}, ${members}, ${duration} | LF ${frames} `, components: [hostingMessageOptions]})
+					const message = await interaction.editReply({content: `${interaction.user.username} hosts ${relic} ${mission}, ${members}, ${duration} | LF ${frames}`, components: [hostingMessageOptions]})
+					hostingMessageId = message.id
 					
-					console.log("inner message id ", message.id)
+					const guestMembers: boolean = +members.charAt(0) > 1 ? true : false;
+
+				
+
+					const squad: Squad = {
+						relic: relic,
+						mission: mission,
+						currentSquad: [hostInSquad],
+						messageId: hostingMessageId,
+						guestMembers: guestMembers,
+						duration: duration,
+						totalSquadMembers: +members.charAt(0),
+						frames: frames,
+						hostId: interaction.user.id,
+						totalGuestMembers: +members.charAt(0) - 1
+						}
 					
+					//add values to firebase
+					const db = getDatabase();
+					
+					//add values to firebase
+					await set(ref(db, 'squad/' + hostingMessageId), squad);
+					const subscriptionsToPing = await fissureService.getUsersToPingFromFirebase([relic+mission]);
+
+					interaction.channel.send(subscriptionsToPing[0]).then((message) => {
+						setTimeout(() => {
+							message.delete();
+						}, 3000);
+					});
 				}, 3000);
 				});
+
+			
 			}
-		
 	}
 }
- 
+
 export default hostSquadCommand;
 

@@ -5,7 +5,7 @@ import { Planets } from '../planets/Planets';
 import { roles } from '../roles/Roles';
 import { channel } from '../events/ready';
 import { FissureResponse } from './interfaces';
-import { get, getDatabase, ref } from 'firebase/database';
+import { get, getDatabase, push, ref } from 'firebase/database';
 export default class FissureService {
     private readonly _fissureUrl = "https://api.warframestat.us/pc/fissures/?language=en";
 
@@ -25,6 +25,7 @@ export default class FissureService {
   
           if(Array.isArray(responseData) && response.status === 200) {
               const fissures: any[] = responseData;
+              const allHardFissureData: any[] = [];
               // const channel = client.channels.cache.get('1013907131902210133');
               // await channel.delete("1106676523899027546")  
             //get a list of all the channels in the server
@@ -40,25 +41,30 @@ export default class FissureService {
 
               //setting embed title
               embed.setTitle("Active endless fissures");
-      
+                //save to firebase
+
               //looping through reponses to see which are steel path mission
               for (const fissure of fissures){
+
+
+
                   if(!fissure['isStorm'] && fissure['isHard']) {
   
                       if(fissure['tier'] === 'Axi') {
                           this.allAxiFissuresEtas.push(this.getTimeFromFissure(fissure));
                       }
-                 
+                
                       if(fissure['tier'] === 'Meso') {
                           this.allMesoFissuresEtas.push(this.getTimeFromFissure(fissure));
                       }
-                 
+                
                       if(fissure['tier'] === 'Neo') {
                           this.allNeoFissuresEtas.push(this.getTimeFromFissure(fissure));
                       }
-                 
+
                       if(fissure['tier'] === 'Lith') {
                           this.allLithFissuresEtas.push(this.getTimeFromFissure(fissure));
+
                       }
                         
                       if(fissure['tier'] === 'Requiem') {
@@ -67,6 +73,8 @@ export default class FissureService {
   
                       if(fissure['missionKey'] === 'Survival' || fissure['missionKey'] ===  'Excavation' || fissure['missionKey'] ===  'Disruption' ||  fissure['missionKey'] ===  'Interception' ) 
                       {
+                        allHardFissureData.push(fissure);
+
                         let currentPlanet = Planets.find(planets => fissure['nodeKey'].includes(planets.getPlanetName()));
                         currentMissionTypes += '' + fissure['tier'] + ' ' + fissure['missionKey'] + " - "+ fissure['node'] + '\n';
                         currentResources += "[" + currentPlanet.getPlanetName() +"]("+currentPlanet.getPlanetWikiLink()+" '" + currentPlanet.getResources() + "')\n";
@@ -75,12 +83,14 @@ export default class FissureService {
                           rolesForPinging.push('' + fissure['tier'] + fissure['missionKey']);
                         }
                         currentTimeRemaining += this.convertSecondsToTimeStamp(this.getTimeFromFissure(fissure));
-                       }
+                      }
                   }
               }
 
-              console.log(rolesForPinging);
-              
+              //save fissure data to firebase
+
+              const db = getDatabase();
+              push(ref(db, 'fissureData'), allHardFissureData);
               const relicSubscriptionsForPinging: string[] = await this.getUsersToPingFromFirebase(rolesForPinging);
               
               const nextFissureMessage = 
@@ -160,7 +170,6 @@ export default class FissureService {
             this.getFissures(channel);
             }, 30000);
         }
-       
         //return fissures;
     }
   async getUsersToPingFromFirebase(rolesForPinging: string[]): Promise<string[]> {

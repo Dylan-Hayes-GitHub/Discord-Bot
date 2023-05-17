@@ -13,4 +13,23 @@ interface FissureMessage {
   noActiveEndlessFissureMessage: string;
   noActiveEndlessFissure: string;
 }
+
+export interface UserInSquad {
+  userId: string;
+  userName: string;
+}
+
+export interface Squad {
+  relic: string;
+  mission: string;
+  currentSquad: UserInSquad[];
+  messageId: string;
+  guestMembers: boolean;
+  totalSquadMembers: number;
+  duration: string;
+  hostId: string;
+  frames?: string;
+  totalGuestMembers?: number;
+}
+
 export type FissureResponse = FissureMessage ;
