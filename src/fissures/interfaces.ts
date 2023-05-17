@@ -1,11 +1,5 @@
-interface FissureNotFoundResponse {
-  foundAnyFissures: false;
-  noActiveEndlessFissure: string;
-  noActiveEndlessFissureMessage: string;
-}
-
-interface FissureFoundResponse {
-  foundAnyFissures: true;
+interface FissureMessage {
+  foundAnyFissures: boolean;
   missionType: string;
   currentMissionTypes: string;
   planet: string;
@@ -16,8 +10,7 @@ interface FissureFoundResponse {
   nodeName: string;
   upComingFissures: string;
   nextFissureMessage: string;
-  noActiveEndlessFissureMessage?: never; // Make the property optional or remove it
-  noActiveEndlessFissure?: never; // Make the property optional or remove it
+  noActiveEndlessFissureMessage: string;
+  noActiveEndlessFissure: string;
 }
-
-export type FissureResponse = FissureNotFoundResponse | FissureFoundResponse;
+export type FissureResponse = FissureMessage ;

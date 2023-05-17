@@ -5,6 +5,7 @@ import { Planets } from '../planets/Planets';
 import { roles } from '../roles/Roles';
 import { channel } from '../events/ready';
 import { FissureResponse } from './interfaces';
+import { get, getDatabase, ref } from 'firebase/database';
 export default class FissureService {
     private readonly _fissureUrl = "https://api.warframestat.us/pc/fissures/?language=en";
 
@@ -29,15 +30,16 @@ export default class FissureService {
             //get a list of all the channels in the server
               let currentTimeRemaining: string = "";
               let currentMissionTypes: string = "";
+              let rolesForPinging: string[] = [];
               let currentResources: string = "";
               let currentMissionNodes: string = "";
       
       
               //creating embed to send to channel
               const embed = new EmbedBuilder();
-      
+
               //setting embed title
-              embed.setTitle("Current Fissures");
+              embed.setTitle("Active endless fissures");
       
               //looping through reponses to see which are steel path mission
               for (const fissure of fissures){
@@ -69,11 +71,18 @@ export default class FissureService {
                         currentMissionTypes += '' + fissure['tier'] + ' ' + fissure['missionKey'] + " - "+ fissure['node'] + '\n';
                         currentResources += "[" + currentPlanet.getPlanetName() +"]("+currentPlanet.getPlanetWikiLink()+" '" + currentPlanet.getResources() + "')\n";
                         currentMissionNodes += "" + fissure['node'] + "\n";
+                        if(!rolesForPinging.includes('' + fissure['tier'] + fissure['missionKey'])){
+                          rolesForPinging.push('' + fissure['tier'] + fissure['missionKey']);
+                        }
                         currentTimeRemaining += this.convertSecondsToTimeStamp(this.getTimeFromFissure(fissure));
                        }
                   }
               }
-  
+
+              console.log(rolesForPinging);
+              
+              const relicSubscriptionsForPinging: string[] = await this.getUsersToPingFromFirebase(rolesForPinging);
+              
               const nextFissureMessage = 
               '\n\nNext Axi fissure ' + this.convertSecsToTimestamp(Math.min(...this.allAxiFissuresEtas)) + 
               'Next Neo fissure ' + this.convertSecsToTimestamp(Math.min(...this.allNeoFissuresEtas)) +
@@ -82,7 +91,7 @@ export default class FissureService {
               'Next Requim fissure ' + this.convertSecsToTimestamp(Math.min(...this.allRequiemFissuresEtas));
   
               const embedMessage: FissureResponse = this.checkIfFoundAnyFissures(currentMissionTypes, currentResources, currentTimeRemaining, currentMissionNodes, nextFissureMessage);
-  
+
               if(embedMessage.foundAnyFissures) {
                 embed.addFields( 
                   { name: embedMessage.missionType, value: embedMessage.currentMissionTypes, inline: true }, 
@@ -90,21 +99,21 @@ export default class FissureService {
                   { name: embedMessage.timeLeft, value: embedMessage.currentTimesLeft, inline: true },
                   { name: embedMessage.upComingFissures, value: embedMessage.nextFissureMessage, inline: false }
                 );
-                
-                
-                   
               } else {
                   //if no fissures were found
                   embed.addFields(
-                      {name: embedMessage.noActiveEndlessFissure, value: embedMessage.noActiveEndlessFissureMessage, inline: true})
+                      {name: embedMessage.noActiveEndlessFissure, value: embedMessage.nextFissureMessage, inline: true})
               }
   
               //get roles to ping
               const rolesToPing = this.getRolesToPing(currentMissionTypes);
-              
-              const rolePingMessage = await channel.send(rolesToPing);
-              
-              rolePingMessage.delete();
+              console.log(currentMissionTypes);
+              if(relicSubscriptionsForPinging.length > 0) {
+                const joinedRolesToPing = relicSubscriptionsForPinging.join(' ');
+                console.log(joinedRolesToPing);
+                const rolePingMessage = await discordChannel.send(joinedRolesToPing);
+                rolePingMessage.delete();
+              }
               
               //send message to channel
               await channel.messages.fetch(process.env.embedId)
@@ -154,6 +163,25 @@ export default class FissureService {
        
         //return fissures;
     }
+  async getUsersToPingFromFirebase(rolesForPinging: string[]): Promise<string[]> {
+    const db = getDatabase();
+
+    const usersToPing: Set<string> = new Set();
+    for(let i =0; i < rolesForPinging.length; i++) {
+      const usersRef = ref(db, 'subscriptions/' + rolesForPinging[i]);
+      const relicsForPinging = await get(usersRef);
+      
+      if(relicsForPinging.exists()) {
+        const users = relicsForPinging.val();
+        const userIDs: string[] = Object.values(users);
+        for (let j = 0; j < userIDs.length; j++) {
+          usersToPing.add("<@" + userIDs[j] + ">");
+        }
+  
+      }
+    }
+    return Array.from(usersToPing);
+  }
   getDelayTimeBeforeStartingLoopAgain(allLowestFissureTimes: number[]) {
     const lowestTimeInSeconds = Math.min(...allLowestFissureTimes);
     const delayTimeInMilliseconds = (lowestTimeInSeconds * 1000) + 10000;
@@ -202,12 +230,12 @@ export default class FissureService {
           }
           ttlSecs += parseFloat(secsReversed);
         }
-        return ttlSecs;
+        return ttlSecs + 120;
       }
 
       private convertSecondsToTimeStamp(timeInSecs: number): string { 
         const newDate = new Date();
-        newDate.setSeconds(newDate.getSeconds() + timeInSecs);
+        newDate.setSeconds(newDate.getSeconds() + timeInSecs + 120);
         return 'Ends <t:' + Math.floor(newDate.getTime() / 1000) + ':R>\n';
       }
 
@@ -236,12 +264,22 @@ export default class FissureService {
         currentMissionNodes: string,
         nextFissureMessage: string
       ): FissureResponse {
-        if (currentMissionTypes === "" || currentResources === "" || currentTimeRemaining === "") {
+        if(currentMissionTypes === "") {
           return {
             foundAnyFissures: false,
-            noActiveEndlessFissure: 'No Endless Fissures Found',
-            noActiveEndlessFissureMessage: nextFissureMessage
-          };
+            missionType: "Mission Type",
+            currentMissionTypes: currentMissionTypes,
+            planet: "Planet",
+            currentPlanetResources: currentResources,
+            timeLeft: "Time Left",
+            currentTimesLeft: currentTimeRemaining,
+            missionNode: "Mission Node",
+            nodeName: currentMissionNodes,
+            upComingFissures: "Times are below of next fissures that should pop up",
+            nextFissureMessage: nextFissureMessage,
+            noActiveEndlessFissureMessage: "No active endless fissures found",
+            noActiveEndlessFissure: "No Endless Fissures Found"
+          }
         } else {
           return {
             foundAnyFissures: true,
@@ -254,9 +292,12 @@ export default class FissureService {
             missionNode: "Mission Node",
             nodeName: currentMissionNodes,
             upComingFissures: "Times are below of next fissures that should pop up",
-            nextFissureMessage: nextFissureMessage
-          };
+            nextFissureMessage: nextFissureMessage,
+            noActiveEndlessFissureMessage: "No active endless fissures found",
+            noActiveEndlessFissure: "No Endless Fissures Found"
+          }
         }
-      }
-
+  }
 }
+
+

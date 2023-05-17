@@ -1,6 +1,4 @@
-import { Command } from "../../structures/Command";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, CommandInteraction, SlashCommandBuilder } from "discord.js";
-import { CommandType } from "../../typings/Command";
+import { CommandInteraction, SlashCommandBuilder } from "discord.js";
 import hostingMessageOptions from "../../fissureMessage/fissureHostingMessage";
 
 

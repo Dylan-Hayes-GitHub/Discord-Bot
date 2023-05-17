@@ -1,10 +1,7 @@
 import { ApplicationCommandDataResolvable, Client, ClientEvents, Collection, CommandInteraction, GatewayIntentBits, REST, Routes, SlashCommandBuilder } from "discord.js";
-import { CommandType } from "../typings/Command";
 import { RegisterCommandsOptions } from "../typings/client";
 import { Event } from "./Events";
-import FissureService from "../fissures/fissureService";
-
-
+import app from "../firebase/firebase";
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -21,6 +18,7 @@ export class DiscordClient extends Client {
     start() {
         this.registerModules();
         this.login(process.env.botToken);
+        const initialLizeApp = app;
     }
 
     async importFile(filePath: string){
@@ -66,24 +64,7 @@ export class DiscordClient extends Client {
           }
         }
 
-        // const hostCommand = {
-        //     data: new SlashCommandBuilder()
-        //     .setName('echo')
-        //     .setDescription('Replies with your input!')
-        //     .addStringOption(option =>
-        //         option.setName('input')
-        //             .setDescription('The input to echo back'))
-        //     .addBooleanOption(option =>
-        //         option.setName('ephemeral')
-        //             .setDescription('Whether or not the echo should be ephemeral')),
-        //     async execute(interaction: CommandInteraction) {
-        //         const tier = interaction.options.get("Relic Tier")!.value as string;
-        //       interaction.reply(`You have selected ${tier} tier`);
-        //     },
-        //   };
 
-        
-        // this.application?.commands.set([]);
         this.guilds.cache.get(process.env.guildId)?.commands.set([]);
 
         this.application?.commands.set(slashCommands);
