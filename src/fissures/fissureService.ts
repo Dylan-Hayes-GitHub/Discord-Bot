@@ -117,10 +117,8 @@ export default class FissureService {
   
               //get roles to ping
               const rolesToPing = this.getRolesToPing(currentMissionTypes);
-              console.log(currentMissionTypes);
               if(relicSubscriptionsForPinging.length > 0) {
                 const joinedRolesToPing = relicSubscriptionsForPinging.join(' ');
-                console.log(joinedRolesToPing);
                 const rolePingMessage = await discordChannel.send(joinedRolesToPing);
                 rolePingMessage.delete();
               }

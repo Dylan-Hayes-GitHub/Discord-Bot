@@ -47,9 +47,7 @@ const subscribeCommand = {
             const values: string[] = Object.values(data);
 
             for(let i = 0; i < values.length; i++){
-                console.log(values[i])
                 if(values[i] === userId){
-                    console.log("user already subscribed")
                     return interaction.reply(`You are already subscribed to ${relic} ${mission} notifications!`).then(() => {
                         setTimeout(async () => {
                             await interaction.deleteReply();

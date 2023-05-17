@@ -65,7 +65,6 @@ const hostSquadCommand = {
 		let hostingMessageId: string = "";
 			if (frames === undefined) {
 				return await interaction.reply(`Processing Host Request of ${relic} ${mission}, ${members}, ${duration}`).then((q) => {
-					console.log("outer message id ", q.id)
 				setTimeout(async () => {
 					const message = await interaction.editReply({content: `${interaction.user.username} hosts ${relic} ${mission}, ${members}, ${duration}`, components: [hostingMessageOptions]})
 					hostingMessageId = message.id
@@ -100,7 +99,6 @@ const hostSquadCommand = {
 				});			  
 			} else if (frames !== undefined) {
 				return await interaction.reply(`Processing Host Request of ${relic} ${mission}, ${members}, ${duration}, ${frames}`).then((q) => {
-					console.log("outer message id ", q.id)
 				setTimeout(async () => {
 					const message = await interaction.editReply({content: `${interaction.user.username} hosts ${relic} ${mission}, ${members}, ${duration} | LF ${frames}`, components: [hostingMessageOptions]})
 					hostingMessageId = message.id

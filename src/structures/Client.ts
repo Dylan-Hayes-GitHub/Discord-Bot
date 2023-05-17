@@ -57,7 +57,6 @@ export class DiscordClient extends Client {
 
             const filePath = path.join(commandsPath, file);
             const command: any = await this.importFile(filePath);
-            console.log(command.data.toJSON()   );
            
            this.commands.set(command.data.name ,command);
            slashCommands.push(command.data);

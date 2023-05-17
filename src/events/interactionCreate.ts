@@ -35,11 +35,9 @@ export default new Event("interactionCreate", async (interaction) => {
 
         //use the inner message id to get the message TODO: make this a function
         if(interaction.customId === 'showSquad'){
-            console.log("show squad")
             let embedToShow = new EmbedBuilder().setTitle("Current Squad Members \n");
             let membersInSquad = "";
 
-            console.log(interaction.message.id)
             const hostingMessageId = interaction.message.id;
 
             //get the squad from firebase
@@ -47,7 +45,6 @@ export default new Event("interactionCreate", async (interaction) => {
             const squadRef = ref(db, 'squad/' + hostingMessageId);
             const squadSnapshot = await get(squadRef);
             if (squadSnapshot.exists()) {
-                console.log('squadSnapshot.val()', squadSnapshot.val())
                 const squad = squadSnapshot.val();
                 squad.currentSquad.forEach((value: UserInSquad) => {
                     membersInSquad += value.userName + "\n";
@@ -92,13 +89,17 @@ export default new Event("interactionCreate", async (interaction) => {
             const squadRef = ref(db, 'squad/' + hostingMessageId);
             const squadSnapshot = await get(squadRef);
             if (squadSnapshot.exists()) {
-                console.log('squadSnapshot.val()', squadSnapshot.val())
                 const squad: Squad = squadSnapshot.val();
                 const userInSquad = squad.currentSquad.find((user: UserInSquad) => user.userId === interaction.user.id);
                 const author: UserInSquad = squad.currentSquad.find((user: UserInSquad) => user.userId === squad.hostId);
 
-                if(!userInSquad) {
-                    interaction.reply({content: "You are already in the squad", ephemeral: true})
+                if(userInSquad) {
+                    //interaction.reply({content: "You are already in the squad", ephemeral: true})
+                    if(squad.frames && squad.frames.length > 0 ) {
+                        return interaction.editReply({content: `${author.userName} hosts ${squad.relic} ${squad.mission}, ${squad.totalSquadMembers}/4, ${squad.duration} | LF ${squad.frames}`})
+                    } else {
+                        return interaction.editReply({content: `${author.userName} hosts ${squad.relic} ${squad.mission}, ${squad.totalSquadMembers}/4, ${squad.duration}`})
+                    }
                 } else {
 
                     //if the total squad count is equal to three delete the message and message all squad members
