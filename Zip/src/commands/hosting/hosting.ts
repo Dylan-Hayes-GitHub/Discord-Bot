@@ -1,11 +1,9 @@
-import { CommandInteraction, SlashCommandBuilder, TextChannel } from "discord.js";
+import { CommandInteraction, SlashCommandBuilder } from "discord.js";
 import hostingMessageOptions from "../../fissureMessage/fissureHostingMessage";
-import { FissureData, Squad, UserInSquad } from "../../fissures/interfaces";
+import { Squad, UserInSquad } from "../../fissures/interfaces";
 import { getDatabase, ref, set } from "firebase/database";
 import FissureService from "../../fissures/fissureService";
-import { client } from "../..";
-import { channel } from "../../events/ready";
-
+import { channel } from "diagnostics_channel";
 
 const fissureService = new FissureService();
 const hostSquadCommand = {
@@ -68,10 +66,7 @@ const hostSquadCommand = {
 			if (frames === undefined) {
 				return await interaction.reply(`Processing Host Request of ${relic} ${mission}, ${members}, ${duration}`).then((q) => {
 				setTimeout(async () => {
-					await interaction.deleteReply();
-
-					const message = await channel.send({content: `${interaction.user.username} hosts ${relic} ${mission}, ${members}, ${duration}`, components: [hostingMessageOptions]});
-					// const message = await interaction.editReply({content: `${interaction.user.username} hosts ${relic} ${mission}, ${members}, ${duration} | LF ${frames}`, components: [hostingMessageOptions]})
+					const message = await interaction.editReply({content: `${interaction.user.username} hosts ${relic} ${mission}, ${members}, ${duration}`, components: [hostingMessageOptions]})
 					hostingMessageId = message.id
 					const guestMembers: boolean = +members.charAt(0) > 1 ? true : false;
 
@@ -92,11 +87,10 @@ const hostSquadCommand = {
 					
 					//add values to firebase
 					await set(ref(db, 'squad/' + hostingMessageId), squad);
-					console.log([relic+mission])
-					const blankFissureData: FissureData[] = [{missionType: relic+mission, fissureId: ''}]
-					const subscriptionsToPing = await fissureService.getUsersToPingFromFirebase(blankFissureData);
-					const combinedUsersToPing = subscriptionsToPing.join(' ');
-					interaction.channel.send(combinedUsersToPing).then((message) => {
+
+					const subscriptionsToPing = await fissureService.getUsersToPingFromFirebase([relic+mission]);
+
+					interaction.channel.send(subscriptionsToPing[0]).then((message) => {
 						setTimeout(() => {
 							message.delete();
 						}, 3000);
@@ -104,12 +98,9 @@ const hostSquadCommand = {
 				}, 3000);
 				});			  
 			} else if (frames !== undefined) {
-				return await interaction.reply(`Processing Host Request of ${relic} ${mission}, ${members}, ${duration}, ${frames}`).then(async (q) => {
-					setTimeout(async () => {
-					await interaction.deleteReply();
-
-					const message = await channel.send({content: `${interaction.user.username} hosts ${relic} ${mission}, ${members}, ${duration}`, components: [hostingMessageOptions]});
-					// const message = await interaction.editReply({content: `${interaction.user.username} hosts ${relic} ${mission}, ${members}, ${duration} | LF ${frames}`, components: [hostingMessageOptions]})
+				return await interaction.reply(`Processing Host Request of ${relic} ${mission}, ${members}, ${duration}, ${frames}`).then((q) => {
+				setTimeout(async () => {
+					const message = await interaction.editReply({content: `${interaction.user.username} hosts ${relic} ${mission}, ${members}, ${duration} | LF ${frames}`, components: [hostingMessageOptions]})
 					hostingMessageId = message.id
 					
 					const guestMembers: boolean = +members.charAt(0) > 1 ? true : false;
@@ -134,10 +125,9 @@ const hostSquadCommand = {
 					
 					//add values to firebase
 					await set(ref(db, 'squad/' + hostingMessageId), squad);
-					const blankFissureData: FissureData[] = [{missionType: relic+mission, fissureId: ''}]
-					const subscriptionsToPing = await fissureService.getUsersToPingFromFirebase(blankFissureData);
-					const combinedUsersToPing = subscriptionsToPing.join(' ');
-					interaction.channel.send(combinedUsersToPing).then((message) => {
+					const subscriptionsToPing = await fissureService.getUsersToPingFromFirebase([relic+mission]);
+
+					interaction.channel.send(subscriptionsToPing[0]).then((message) => {
 						setTimeout(() => {
 							message.delete();
 						}, 3000);
