@@ -7,4 +7,3 @@ dotenv.config();
 export const client = new DiscordClient();
 export const rest = new REST().setToken(process.env.botToken);
 client.start();
-

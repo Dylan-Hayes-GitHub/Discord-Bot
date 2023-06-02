@@ -1,6 +1,4 @@
 dist
 node_modules/*
 .env
-.vs
-.env
 src/firebase

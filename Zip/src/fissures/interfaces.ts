@@ -32,9 +32,4 @@ export interface Squad {
   totalGuestMembers?: number;
 }
 
-export interface FissureData {
-  missionType: string;
-  fissureId: string;
-}
-
 export type FissureResponse = FissureMessage ;
