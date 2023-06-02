@@ -8,7 +8,7 @@ import path from 'node:path';
 import { client, rest } from "..";
 import { startServer } from "../express/express";
 export class DiscordClient extends Client {
-  commands: Collection<string, any> = new Collection();
+  let commands: Collection<string, any> = new Collection();
 
   constructor() {
     super({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
@@ -19,7 +19,11 @@ export class DiscordClient extends Client {
   start() {
     this.registerModules();
     this.login(process.env.botToken);
+
+    //start express server
     startServer();
+
+    //initialize firebase
     const initialLizeApp = app;
   }
 
@@ -85,7 +89,6 @@ export class DiscordClient extends Client {
           { body: slashCommands },
         );
 
-        console.log(`Successfully reloaded ${data.length} application (/) commands.`);
       } catch (error) {
         // And of course, make sure you catch and log any errors!
         console.error(error);
